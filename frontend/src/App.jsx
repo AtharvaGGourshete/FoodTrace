@@ -1,122 +1,185 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import {
+  Navigate,
+  Route,
+  Routes,
+} from "react-router-dom";
 
-function App() {
-  const [count, setCount] = useState(0)
+import LandingPage from "./pages/LandingPage";
+import WalletPage from "./pages/WalletPage";
+
+import DashboardPage from "./pages/DashboardPage";
+
+import ProductsPage from "./pages/ProductsPage";
+import ProductDetailsPage from "./pages/ProductDetailsPage";
+
+import BatchesPage from "./pages/BatchesPage";
+import BatchDetailsPage from "./pages/BatchDetailsPage";
+
+import TransferPage from "./pages/TransferPage";
+import RecallPage from "./pages/RecallPage";
+
+import HistoryPage from "./pages/HistoryPage";
+
+import VerifyPage from "./pages/VerifyPage";
+
+import OrganizationsPage from "./pages/OrganizationsPage";
+import TransactionsPage from "./pages/TransactionsPage";
+
+import NotFoundPage from "./pages/NotFoundPage";
+
+export default function App() {
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
 
-      <div className="ticks"></div>
+    <Routes>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      {/* PUBLIC */}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      <Route
+        path="/"
+        element={<LandingPage />}
+      />
+
+      <Route
+        path="/wallet"
+        element={<WalletPage />}
+      />
+
+      <Route
+        path="/verify/:batchId"
+        element={<VerifyPage />}
+      />
+
+      {/* ADMIN */}
+
+      <Route
+        path="/app/admin"
+        element={
+          <DashboardPage role="admin" />
+        }
+      />
+
+      <Route
+        path="/app/admin/organizations"
+        element={
+          <OrganizationsPage />
+        }
+      />
+
+      <Route
+        path="/app/admin/transactions"
+        element={
+          <TransactionsPage />
+        }
+      />
+
+      {/* MANUFACTURER */}
+
+      <Route
+        path="/app/manufacturer"
+        element={
+          <DashboardPage
+            role="manufacturer"
+          />
+        }
+      />
+
+      {/* DISTRIBUTOR */}
+
+      <Route
+        path="/app/distributor"
+        element={
+          <DashboardPage
+            role="distributor"
+          />
+        }
+      />
+
+      {/* RETAILER */}
+
+      <Route
+        path="/app/retailer"
+        element={
+          <DashboardPage
+            role="retailer"
+          />
+        }
+      />
+
+      {/* PRODUCTS */}
+
+      <Route
+        path="/app/products"
+        element={
+          <ProductsPage />
+        }
+      />
+
+      <Route
+        path="/app/products/:id"
+        element={
+          <ProductDetailsPage />
+        }
+      />
+
+      {/* BATCHES */}
+
+      <Route
+        path="/app/batches"
+        element={
+          <BatchesPage />
+        }
+      />
+
+      <Route
+        path="/app/batches/:id"
+        element={
+          <BatchDetailsPage />
+        }
+      />
+
+      {/* SUPPLY CHAIN */}
+
+      <Route
+        path="/app/transfer"
+        element={
+          <TransferPage />
+        }
+      />
+
+      <Route
+        path="/app/recall"
+        element={
+          <RecallPage />
+        }
+      />
+
+      <Route
+        path="/app/history"
+        element={
+          <HistoryPage />
+        }
+      />
+
+      {/* DEFAULT */}
+
+      <Route
+        path="/app"
+        element={
+          <Navigate
+            to="/app/manufacturer"
+            replace
+          />
+        }
+      />
+
+      {/* 404 */}
+
+      <Route
+        path="*"
+        element={<NotFoundPage />}
+      />
+
+    </Routes>
+  );
 }
-
-export default App
