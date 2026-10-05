@@ -1,48 +1,98 @@
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import {
+  NavLink,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+
+import {
+  LayoutDashboard,
+  Building2,
+  Package,
+  Boxes,
+  ArrowUpRight,
+  ArrowRight,
+  AlertTriangle,
+  History,
+  ArrowDownToLine,
+  QrCode,
+  ShieldCheck,
+  WalletCards,
+  ChevronDown,
+} from "lucide-react";
+
 import { roleLabels } from "../data/mockData";
+import { useWallet } from "../context/WalletContext";
 
 const navByRole = {
   admin: [
-    ["Dashboard", "/app/admin", "▦"],
-    ["Organizations", "/app/admin/organizations", "◉"],
-    ["Products", "/app/products", "□"],
-    ["Batches", "/app/batches", "◫"],
-    ["Transactions", "/app/admin/transactions", "↗"],
+    ["Dashboard", "/app/admin", LayoutDashboard],
+    ["Organizations", "/app/admin/organizations", Building2],
+    ["Products", "/app/products", Package],
+    ["Batches", "/app/batches", Boxes],
+    ["Transactions", "/app/admin/transactions", ArrowUpRight],
   ],
 
   manufacturer: [
-    ["Dashboard", "/app/manufacturer", "▦"],
-    ["Products", "/app/products", "□"],
-    ["Batches", "/app/batches", "◫"],
-    ["Transfer Batch", "/app/transfer", "→"],
-    ["Recall Batch", "/app/recall", "⚠"],
-    ["History", "/app/history", "◷"],
+    ["Dashboard", "/app/manufacturer", LayoutDashboard],
+    ["Products", "/app/products", Package],
+    ["Batches", "/app/batches", Boxes],
+    ["Transfer Batch", "/app/transfer", ArrowRight],
+    ["Recall Batch", "/app/recall", AlertTriangle],
+    ["History", "/app/history", History],
   ],
 
   distributor: [
-    ["Dashboard", "/app/distributor", "▦"],
-    ["Incoming Batches", "/app/batches", "◫"],
-    ["Transfer Batch", "/app/transfer", "→"],
-    ["History", "/app/history", "◷"],
+    ["Dashboard", "/app/distributor", LayoutDashboard],
+    ["Incoming Batches", "/app/batches", Boxes],
+    ["Transfer Batch", "/app/transfer", ArrowRight],
+    ["History", "/app/history", History],
   ],
 
   retailer: [
-    ["Dashboard", "/app/retailer", "▦"],
-    ["Batches", "/app/batches", "◫"],
-    ["Receive Batch", "/app/transfer", "↓"],
-    ["QR Verification", "/verify/BATCH-2026-001", "⌁"],
-    ["History", "/app/history", "◷"],
+    ["Dashboard", "/app/retailer", LayoutDashboard],
+    ["Batches", "/app/batches", Boxes],
+    ["Receive Batch", "/app/transfer", ArrowDownToLine],
+    ["QR Verification", "/verify/BATCH-2026-001", QrCode],
+    ["History", "/app/history", History],
   ],
 };
 
+function shortenAddress(address) {
+  if (!address) {
+    return "Not connected";
+  }
+
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
 export default function AppShell({
-  role = "manufacturer",
+  role: roleProp = "manufacturer",
   children,
 }) {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const links = navByRole[role] || navByRole.manufacturer;
+  const {
+    address,
+    role: walletRole,
+    isConnected,
+  } = useWallet();
+
+  const actualRole =
+    walletRole?.name?.toLowerCase() ||
+    roleProp;
+
+  const links =
+    navByRole[actualRole] ||
+    navByRole.manufacturer;
+
+  const displayRole =
+    roleLabels[actualRole] ||
+    walletRole?.name ||
+    "Unknown";
+
+  const displayAddress =
+    shortenAddress(address);
 
   return (
     <div className="app-shell">
@@ -52,11 +102,18 @@ export default function AppShell({
       <aside className="sidebar">
 
         <div className="brand">
-          <div className="brand-mark">F</div>
+          <div className="brand-mark">
+            F
+          </div>
 
           <div>
-            <strong>FoodTrace</strong>
-            <span>Supply Chain DApp</span>
+            <strong>
+              FoodTrace
+            </strong>
+
+            <span>
+              Supply Chain DApp
+            </span>
           </div>
         </div>
 
@@ -66,25 +123,32 @@ export default function AppShell({
 
         <nav className="side-nav">
 
-          {links.map(([label, href, icon]) => (
-            <NavLink
-              key={label}
-              to={href}
-              className={() =>
-                `side-link ${
-                  location.pathname === href ? "active" : ""
-                }`
-              }
-            >
-              <span className="nav-icon">
-                {icon}
-              </span>
+          {links.map(
+            ([label, href, Icon]) => (
+              <NavLink
+                key={label}
+                to={href}
+                className={() =>
+                  `side-link ${
+                    location.pathname === href
+                      ? "active"
+                      : ""
+                  }`
+                }
+              >
+                <span className="nav-icon">
+                  <Icon
+                    size={18}
+                    strokeWidth={1.8}
+                  />
+                </span>
 
-              <span>
-                {label}
-              </span>
-            </NavLink>
-          ))}
+                <span>
+                  {label}
+                </span>
+              </NavLink>
+            )
+          )}
 
         </nav>
 
@@ -95,7 +159,10 @@ export default function AppShell({
             to="/verify/BATCH-2026-001"
           >
             <span className="nav-icon">
-              ⌁
+              <ShieldCheck
+                size={18}
+                strokeWidth={1.8}
+              />
             </span>
 
             Public Verification
@@ -103,13 +170,22 @@ export default function AppShell({
 
           <button
             className="wallet-mini"
-            onClick={() => navigate("/wallet")}
+            onClick={() =>
+              navigate("/wallet")
+            }
           >
             <span className="status-dot" />
 
             <span>
-              <b>Wallet connected</b>
-              <small>0x71C...8A21</small>
+              <b>
+                {isConnected
+                  ? "Wallet connected"
+                  : "Wallet disconnected"}
+              </b>
+
+              <small>
+                {displayAddress}
+              </small>
             </span>
           </button>
 
@@ -124,39 +200,60 @@ export default function AppShell({
         <header className="topbar">
 
           <div className="breadcrumbs">
-            <span>FoodTrace</span>
-            <span>/</span>
+
+            <span>
+              FoodTrace
+            </span>
+
+            <span>
+              /
+            </span>
 
             <b>
-              {roleLabels[role]}
+              {displayRole}
             </b>
+
           </div>
 
           <div className="top-actions">
 
-            <button className="icon-button">
-              ♢
+            <button
+              className="icon-button"
+              aria-label="Wallet"
+              onClick={() =>
+                navigate("/wallet")
+              }
+            >
+              <WalletCards
+                size={19}
+                strokeWidth={1.8}
+              />
             </button>
 
             <button
               className="profile-chip"
-              onClick={() => navigate("/wallet")}
+              onClick={() =>
+                navigate("/wallet")
+              }
             >
               <span className="avatar">
-                A
+                {displayRole.charAt(0)}
               </span>
 
               <span>
-                <b>Account 0</b>
+                <b>
+                  {displayRole}
+                </b>
 
                 <small>
-                  {roleLabels[role]}
+                  {displayAddress}
                 </small>
               </span>
 
-              <span>
-                ⌄
-              </span>
+              <ChevronDown
+                size={16}
+                strokeWidth={1.8}
+              />
             </button>
 
           </div>

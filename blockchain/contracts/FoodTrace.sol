@@ -18,7 +18,9 @@ contract FoodTrace {
     enum BatchStatus {
         ACTIVE,
         SOLD,
-        RECALLED
+        RECALLED,
+        IN_TRANSIT,
+        DELIVERED
     }
 
     // ============================================================
@@ -87,6 +89,15 @@ contract FoodTrace {
     mapping(string => bool) private productExists;
     mapping(string => bool) private batchExists;
     mapping(string => bool) private organizationExists;
+
+    // Enumeration indexes used by the frontend.
+    string[] private organizationIds;
+    string[] private productIds;
+    string[] private batchIds;
+    mapping(string => string[]) private productBatchIds;
+
+    // Number of batches currently owned by each wallet.
+    mapping(address => uint256) public ownedBatchCount;
 
     // ============================================================
     // EVENTS
@@ -270,6 +281,7 @@ contract FoodTrace {
         });
 
         organizationExists[organizationId] = true;
+        organizationIds.push(organizationId);
         organizationIdByAddress[walletAddress] = organizationId;
         roles[walletAddress] = role;
 
@@ -334,6 +346,24 @@ contract FoodTrace {
         return organizations[organizationId];
     }
 
+    function getOrganizationIds()
+        external
+        view
+        returns (string[] memory)
+    {
+        return organizationIds;
+    }
+
+    function getOrganizationBatchCount(
+        address wallet
+    )
+        external
+        view
+        returns (uint256)
+    {
+        return ownedBatchCount[wallet];
+    }
+
     // ============================================================
     // PRODUCT MANAGEMENT
     // ============================================================
@@ -368,6 +398,7 @@ contract FoodTrace {
         });
 
         productExists[productId] = true;
+        productIds.push(productId);
 
         emit ProductCreated(
             productId,
@@ -431,6 +462,14 @@ contract FoodTrace {
         return products[productId];
     }
 
+    function getProductIds()
+        external
+        view
+        returns (string[] memory)
+    {
+        return productIds;
+    }
+
     // ============================================================
     // BATCH MANAGEMENT
     // ============================================================
@@ -490,6 +529,9 @@ contract FoodTrace {
         });
 
         batchExists[batchId] = true;
+        batchIds.push(batchId);
+        productBatchIds[productId].push(batchId);
+        ownedBatchCount[msg.sender] += 1;
 
         _recordBatchEvent(
             batchId,
@@ -514,6 +556,44 @@ contract FoodTrace {
         returns (Batch memory)
     {
         return batches[batchId];
+    }
+
+    function getBatchIds()
+        external
+        view
+        returns (string[] memory)
+    {
+        return batchIds;
+    }
+
+    function getBatchCount()
+        external
+        view
+        returns (uint256)
+    {
+        return batchIds.length;
+    }
+
+    function getProductBatchIds(
+        string memory productId
+    )
+        external
+        view
+        productMustExist(productId)
+        returns (string[] memory)
+    {
+        return productBatchIds[productId];
+    }
+
+    function getProductBatchCount(
+        string memory productId
+    )
+        external
+        view
+        productMustExist(productId)
+        returns (uint256)
+    {
+        return productBatchIds[productId].length;
     }
 
     // ============================================================
@@ -559,6 +639,15 @@ contract FoodTrace {
         address previousOwner = batch.currentOwner;
 
         batch.currentOwner = newOwner;
+
+        ownedBatchCount[previousOwner] -= 1;
+        ownedBatchCount[newOwner] += 1;
+
+        if (roles[newOwner] == Role.DISTRIBUTOR) {
+            batch.status = BatchStatus.IN_TRANSIT;
+        } else if (roles[newOwner] == Role.RETAILER) {
+            batch.status = BatchStatus.DELIVERED;
+        }
 
         _recordBatchEvent(
             batchId,
@@ -606,6 +695,9 @@ contract FoodTrace {
 
         batch.currentOwner = customer;
         batch.status = BatchStatus.SOLD;
+
+        ownedBatchCount[msg.sender] -= 1;
+        ownedBatchCount[customer] += 1;
 
         _recordBatchEvent(
             batchId,

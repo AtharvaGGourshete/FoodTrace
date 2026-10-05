@@ -12,23 +12,32 @@ const FOODTRACE_ABI = [
 
     "function isAuthorizedOrganization(address wallet) view returns (bool)",
 
+    // Organizations
     "function getOrganization(string organizationId) view returns (tuple(string organizationId,string name,address walletAddress,uint8 role,string location,bool active))",
+    "function getOrganizationIds() view returns (string[])",
+    "function getOrganizationBatchCount(address wallet) view returns (uint256)",
 
+    // Products
     "function getProduct(string productId) view returns (tuple(string productId,string name,string description,string category,address manufacturer,uint256 createdAt,bool active))",
+    "function getProductIds() view returns (string[])",
+    "function getProductBatchIds(string productId) view returns (string[])",
+    "function getProductBatchCount(string productId) view returns (uint256)",
 
+    // Batches
     "function getBatch(string batchId) view returns (tuple(string batchId,string productId,uint256 quantity,uint256 manufacturingDate,uint256 expiryDate,uint256 mrp,address currentOwner,uint8 status,bool recalled,string recallReason,uint256 createdAt))",
+    "function getBatchIds() view returns (string[])",
+    "function getBatchCount() view returns (uint256)",
 
+    // History
     "function getBatchHistory(string batchId) view returns (tuple(string eventType,address actor,uint256 timestamp,string location,string notes)[])",
-
     "function getBatchHistoryCount(string batchId) view returns (uint256)",
 
+    // Ownership / verification
     "function getCurrentOwner(string batchId) view returns (address)",
-
     "function isBatchRecalled(string batchId) view returns (bool)",
-
     "function organizationIdByAddress(address) view returns (string)",
-
     "function roles(address) view returns (uint8)",
+    "function ownedBatchCount(address) view returns (uint256)",
 
     "function verifyBatch(string batchId) view returns (bool valid,bool recalled,address currentOwner,uint8 status)",
 
@@ -36,26 +45,25 @@ const FOODTRACE_ABI = [
     // WRITE FUNCTIONS
     // =========================
 
+    // Organizations
     "function registerOrganization(string organizationId,string name,address walletAddress,uint8 role,string location)",
-
     "function activateOrganization(string organizationId)",
-
     "function deactivateOrganization(string organizationId)",
 
+    // Products
     "function createProduct(string productId,string name,string description,string category)",
-
     "function activateProduct(string productId)",
-
     "function deactivateProduct(string productId)",
 
+    // Batches
     "function createBatch(string batchId,string productId,uint256 quantity,uint256 manufacturingDate,uint256 expiryDate,uint256 mrp,string location)",
 
+    // Supply-chain actions
     "function transferBatch(string batchId,address newOwner,string location,string notes)",
-
     "function sellBatch(string batchId,address customer,string location)",
 
+    // Recall / history
     "function recallBatch(string batchId,string reason,string location)",
-
     "function recordBatchEvent(string batchId,string eventType,string location,string notes)",
 ];
 

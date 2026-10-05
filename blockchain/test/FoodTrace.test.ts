@@ -875,4 +875,488 @@ describe("FoodTrace", function () {
 
     });
 
+
+    // ============================================================
+    // FRONTEND ENUMERATION / INDEXES
+    // ============================================================
+
+    describe("Frontend Enumeration & Indexes", function () {
+
+        it("should enumerate registered organizations and track owned batches", async function () {
+            await foodTrace.registerOrganization(
+                "ORG-001",
+                "ABC Foods",
+                manufacturer.address,
+                ROLE.MANUFACTURER,
+                "Mumbai"
+            );
+
+            await foodTrace.registerOrganization(
+                "ORG-002",
+                "XYZ Distribution",
+                distributor.address,
+                ROLE.DISTRIBUTOR,
+                "Pune"
+            );
+
+            const organizationIds =
+                await foodTrace.getOrganizationIds();
+
+            expect(organizationIds.length).to.equal(2);
+            expect(organizationIds[0]).to.equal("ORG-001");
+            expect(organizationIds[1]).to.equal("ORG-002");
+
+            expect(
+                await foodTrace.getOrganizationBatchCount(
+                    manufacturer.address
+                )
+            ).to.equal(0);
+        });
+
+        it("should enumerate products", async function () {
+            await foodTrace.registerOrganization(
+                "ORG-001",
+                "ABC Foods",
+                manufacturer.address,
+                ROLE.MANUFACTURER,
+                "Mumbai"
+            );
+
+            await foodTrace
+                .connect(manufacturer)
+                .createProduct(
+                    "P101",
+                    "Organic Biscuits",
+                    "Organic wheat biscuits",
+                    "Biscuits"
+                );
+
+            await foodTrace
+                .connect(manufacturer)
+                .createProduct(
+                    "P102",
+                    "Mango Juice",
+                    "Mango fruit juice",
+                    "Beverages"
+                );
+
+            const productIds =
+                await foodTrace.getProductIds();
+
+            expect(productIds.length).to.equal(2);
+            expect(productIds[0]).to.equal("P101");
+            expect(productIds[1]).to.equal("P102");
+        });
+
+        it("should enumerate batches and product batch relationships", async function () {
+            await foodTrace.registerOrganization(
+                "ORG-001",
+                "ABC Foods",
+                manufacturer.address,
+                ROLE.MANUFACTURER,
+                "Mumbai"
+            );
+
+            await foodTrace
+                .connect(manufacturer)
+                .createProduct(
+                    "P101",
+                    "Organic Biscuits",
+                    "Organic wheat biscuits",
+                    "Biscuits"
+                );
+
+            await foodTrace
+                .connect(manufacturer)
+                .createProduct(
+                    "P102",
+                    "Mango Juice",
+                    "Mango fruit juice",
+                    "Beverages"
+                );
+
+            await foodTrace
+                .connect(manufacturer)
+                .createBatch(
+                    "BATCH-2026-001",
+                    "P101",
+                    5000,
+                    1759276800,
+                    1775001600,
+                    50,
+                    "Mumbai"
+                );
+
+            await foodTrace
+                .connect(manufacturer)
+                .createBatch(
+                    "BATCH-2026-002",
+                    "P101",
+                    3500,
+                    1759449600,
+                    1775174400,
+                    55,
+                    "Mumbai"
+                );
+
+            await foodTrace
+                .connect(manufacturer)
+                .createBatch(
+                    "BATCH-2026-003",
+                    "P102",
+                    2400,
+                    1759622400,
+                    1767571200,
+                    80,
+                    "Mumbai"
+                );
+
+            const batchIds =
+                await foodTrace.getBatchIds();
+
+            expect(batchIds.length).to.equal(3);
+            expect(
+                await foodTrace.getBatchCount()
+            ).to.equal(3);
+
+            const p101BatchIds =
+                await foodTrace.getProductBatchIds("P101");
+
+            expect(p101BatchIds.length).to.equal(2);
+            expect(p101BatchIds[0]).to.equal("BATCH-2026-001");
+            expect(p101BatchIds[1]).to.equal("BATCH-2026-002");
+
+            expect(
+                await foodTrace.getProductBatchCount("P101")
+            ).to.equal(2);
+
+            const p102BatchIds =
+                await foodTrace.getProductBatchIds("P102");
+
+            expect(p102BatchIds.length).to.equal(1);
+            expect(p102BatchIds[0]).to.equal("BATCH-2026-003");
+
+            expect(
+                await foodTrace.getProductBatchCount("P102")
+            ).to.equal(1);
+        });
+
+        it("should track batch ownership counts through the supply chain", async function () {
+            await foodTrace.registerOrganization(
+                "ORG-001",
+                "ABC Foods",
+                manufacturer.address,
+                ROLE.MANUFACTURER,
+                "Mumbai"
+            );
+
+            await foodTrace.registerOrganization(
+                "ORG-002",
+                "XYZ Distribution",
+                distributor.address,
+                ROLE.DISTRIBUTOR,
+                "Pune"
+            );
+
+            await foodTrace.registerOrganization(
+                "ORG-003",
+                "Retail Mart",
+                retailer.address,
+                ROLE.RETAILER,
+                "Thane"
+            );
+
+            await foodTrace
+                .connect(manufacturer)
+                .createProduct(
+                    "P101",
+                    "Organic Biscuits",
+                    "Organic wheat biscuits",
+                    "Biscuits"
+                );
+
+            await foodTrace
+                .connect(manufacturer)
+                .createBatch(
+                    "BATCH-2026-001",
+                    "P101",
+                    5000,
+                    1759276800,
+                    1775001600,
+                    50,
+                    "Mumbai"
+                );
+
+            expect(
+                await foodTrace.getOrganizationBatchCount(
+                    manufacturer.address
+                )
+            ).to.equal(1);
+
+            expect(
+                await foodTrace.getOrganizationBatchCount(
+                    distributor.address
+                )
+            ).to.equal(0);
+
+            await foodTrace
+                .connect(manufacturer)
+                .transferBatch(
+                    "BATCH-2026-001",
+                    distributor.address,
+                    "Pune",
+                    "Transferred to distributor"
+                );
+
+            expect(
+                await foodTrace.getOrganizationBatchCount(
+                    manufacturer.address
+                )
+            ).to.equal(0);
+
+            expect(
+                await foodTrace.getOrganizationBatchCount(
+                    distributor.address
+                )
+            ).to.equal(1);
+
+            await foodTrace
+                .connect(distributor)
+                .transferBatch(
+                    "BATCH-2026-001",
+                    retailer.address,
+                    "Thane",
+                    "Transferred to retailer"
+                );
+
+            expect(
+                await foodTrace.getOrganizationBatchCount(
+                    distributor.address
+                )
+            ).to.equal(0);
+
+            expect(
+                await foodTrace.getOrganizationBatchCount(
+                    retailer.address
+                )
+            ).to.equal(1);
+        });
+
+    });
+
+    // ============================================================
+    // BATCH LIFECYCLE
+    // ============================================================
+
+    describe("Batch Lifecycle", function () {
+
+        beforeEach(async function () {
+
+            await foodTrace.registerOrganization(
+                "ORG-001",
+                "ABC Foods",
+                manufacturer.address,
+                ROLE.MANUFACTURER,
+                "Mumbai"
+            );
+
+            await foodTrace.registerOrganization(
+                "ORG-002",
+                "XYZ Distribution",
+                distributor.address,
+                ROLE.DISTRIBUTOR,
+                "Pune"
+            );
+
+            await foodTrace.registerOrganization(
+                "ORG-003",
+                "Retail Mart",
+                retailer.address,
+                ROLE.RETAILER,
+                "Thane"
+            );
+
+            await foodTrace
+                .connect(manufacturer)
+                .createProduct(
+                    "P101",
+                    "Organic Biscuits",
+                    "Organic wheat biscuits",
+                    "Biscuits"
+                );
+
+            await foodTrace
+                .connect(manufacturer)
+                .createBatch(
+                    "BATCH-2026-001",
+                    "P101",
+                    5000,
+                    1759276800,
+                    1775001600,
+                    50,
+                    "Mumbai"
+                );
+        });
+
+        it("should change status to IN_TRANSIT when transferred to distributor", async function () {
+            await foodTrace
+                .connect(manufacturer)
+                .transferBatch(
+                    "BATCH-2026-001",
+                    distributor.address,
+                    "Pune",
+                    "Transferred to distributor"
+                );
+
+            const batch =
+                await foodTrace.getBatch("BATCH-2026-001");
+
+            expect(batch.status).to.equal(3);
+        });
+
+        it("should change status to DELIVERED when transferred to retailer", async function () {
+            await foodTrace
+                .connect(manufacturer)
+                .transferBatch(
+                    "BATCH-2026-001",
+                    distributor.address,
+                    "Pune",
+                    "Transferred to distributor"
+                );
+
+            await foodTrace
+                .connect(distributor)
+                .transferBatch(
+                    "BATCH-2026-001",
+                    retailer.address,
+                    "Thane",
+                    "Transferred to retailer"
+                );
+
+            const batch =
+                await foodTrace.getBatch("BATCH-2026-001");
+
+            expect(batch.status).to.equal(4);
+        });
+
+        it("should change status to SOLD and transfer ownership to customer", async function () {
+            await foodTrace
+                .connect(manufacturer)
+                .transferBatch(
+                    "BATCH-2026-001",
+                    distributor.address,
+                    "Pune",
+                    "Transferred to distributor"
+                );
+
+            await foodTrace
+                .connect(distributor)
+                .transferBatch(
+                    "BATCH-2026-001",
+                    retailer.address,
+                    "Thane",
+                    "Transferred to retailer"
+                );
+
+            await foodTrace
+                .connect(retailer)
+                .sellBatch(
+                    "BATCH-2026-001",
+                    customer.address,
+                    "Thane"
+                );
+
+            const batch =
+                await foodTrace.getBatch("BATCH-2026-001");
+
+            expect(batch.currentOwner)
+                .to.equal(customer.address);
+
+            expect(batch.status)
+                .to.equal(1);
+
+            expect(
+                await foodTrace.getOrganizationBatchCount(
+                    retailer.address
+                )
+            ).to.equal(0);
+
+            expect(
+                await foodTrace.ownedBatchCount(
+                    customer.address
+                )
+            ).to.equal(1);
+        });
+
+    });
+
+    // ============================================================
+    // ENUMERATION EDGE CASES
+    // ============================================================
+
+    describe("Enumeration Edge Cases", function () {
+
+        it("should return empty arrays for a fresh contract", async function () {
+            expect(
+                (await foodTrace.getOrganizationIds()).length
+            ).to.equal(0);
+
+            expect(
+                (await foodTrace.getProductIds()).length
+            ).to.equal(0);
+
+            expect(
+                (await foodTrace.getBatchIds()).length
+            ).to.equal(0);
+
+            expect(
+                await foodTrace.getBatchCount()
+            ).to.equal(0);
+        });
+
+        it("should reject product batch enumeration for an unknown product", async function () {
+            await expect(
+                foodTrace.getProductBatchIds("UNKNOWN")
+            ).to.be.revertedWith(
+                "Product does not exist"
+            );
+        });
+
+        it("should reject product batch count for an unknown product", async function () {
+            await expect(
+                foodTrace.getProductBatchCount("UNKNOWN")
+            ).to.be.revertedWith(
+                "Product does not exist"
+            );
+        });
+
+        it("should keep organization and product enumeration free of duplicates", async function () {
+            await foodTrace.registerOrganization(
+                "ORG-001",
+                "ABC Foods",
+                manufacturer.address,
+                ROLE.MANUFACTURER,
+                "Mumbai"
+            );
+
+            await foodTrace
+                .connect(manufacturer)
+                .createProduct(
+                    "P101",
+                    "Organic Biscuits",
+                    "Organic wheat biscuits",
+                    "Biscuits"
+                );
+
+            expect(
+                (await foodTrace.getOrganizationIds()).length
+            ).to.equal(1);
+
+            expect(
+                (await foodTrace.getProductIds()).length
+            ).to.equal(1);
+        });
+
+    });
+
 });
