@@ -4,7 +4,17 @@ import {
   useMemo,
   useState,
 } from "react";
-
+import {
+  Building2,
+  Package,
+  Boxes,
+  Activity,
+  ArrowRight,
+  ArrowDown,
+  CheckCircle2,
+  AlertTriangle,
+  ShieldCheck,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 
 import AppShell from "../components/AppShell";
@@ -697,265 +707,223 @@ export default function DashboardPage({
    */
 
   const stats = useMemo(
-    () => {
+  () => {
+    if (role === "admin") {
+      return [
+        [
+          "Organizations",
+          organizations.length,
+          "Registered on-chain",
+          Building2,
+        ],
 
-      if (role === "admin") {
+        [
+          "Products",
+          products.length,
+          "Registered products",
+          Package,
+        ],
 
-        return [
+        [
+          "Active Batches",
+          batches.filter(
+            (batch) =>
+              batch.statusName === "ACTIVE"
+          ).length,
+          "Currently active",
+          Boxes,
+        ],
 
-          [
-            "Organizations",
-            organizations.length,
-            "Registered on-chain",
-            "◉",
-          ],
+        [
+          "Blockchain Events",
+          activity.length,
+          "Recorded batch events",
+          Activity,
+        ],
+      ];
+    }
 
-          [
-            "Products",
-            products.length,
-            "Registered products",
-            "□",
-          ],
+    if (role === "manufacturer") {
+      return [
+        [
+          "Products",
+          myProducts.length,
+          "Created by you",
+          Package,
+        ],
 
-          [
-            "Active Batches",
-            batches.filter(
-              (batch) =>
-                batch.statusName ===
-                "ACTIVE"
-            ).length,
-            "Currently active",
-            "◫",
-          ],
+        [
+          "Active Batches",
+          myBatches.filter(
+            (batch) =>
+              batch.statusName === "ACTIVE"
+          ).length,
+          "Currently owned",
+          Boxes,
+        ],
 
-          [
-            "Blockchain Events",
-            activity.length,
-            "Recorded batch events",
-            "↗",
-          ],
+        [
+          "In Transit",
+          myBatches.filter(
+            (batch) =>
+              batch.statusName === "IN TRANSIT"
+          ).length,
+          "Currently in transit",
+          ArrowRight,
+        ],
 
-        ];
+        [
+          "Recalled",
+          myBatches.filter(
+            (batch) =>
+              batch.statusName === "RECALLED"
+          ).length,
+          "Requires attention",
+          AlertTriangle,
+        ],
+      ];
+    }
 
-      }
+    if (role === "distributor") {
+      return [
+        [
+          "Incoming",
+          myBatches.filter(
+            (batch) =>
+              batch.statusName === "IN TRANSIT"
+          ).length,
+          "Batches in transit",
+          ArrowDown,
+        ],
 
+        [
+          "In Transit",
+          myBatches.filter(
+            (batch) =>
+              batch.statusName === "IN TRANSIT"
+          ).length,
+          "Currently held",
+          ArrowRight,
+        ],
 
-      if (role === "manufacturer") {
+        [
+          "Received",
+          myBatches.filter(
+            (batch) =>
+              batch.statusName === "DELIVERED"
+          ).length,
+          "Delivered batches",
+          CheckCircle2,
+        ],
 
-        return [
+        [
+          "Active Batches",
+          myBatches.filter(
+            (batch) =>
+              batch.statusName === "ACTIVE"
+          ).length,
+          "Currently owned",
+          Boxes,
+        ],
+      ];
+    }
 
-          [
-            "Products",
-            myProducts.length,
-            "Created by you",
-            "□",
-          ],
+    if (role === "retailer") {
+      return [
+        [
+          "Received",
+          myBatches.filter(
+            (batch) =>
+              batch.statusName === "DELIVERED"
+          ).length,
+          "Delivered batches",
+          CheckCircle2,
+        ],
 
-          [
-            "Active Batches",
-            myBatches.filter(
-              (batch) =>
-                batch.statusName ===
-                "ACTIVE"
-            ).length,
-            "Currently owned",
-            "◫",
-          ],
+        [
+          "Available",
+          myBatches.filter(
+            (batch) =>
+              batch.statusName === "DELIVERED" ||
+              batch.statusName === "ACTIVE"
+          ).length,
+          "Retail-ready inventory",
+          Boxes,
+        ],
 
-          [
-            "In Transit",
-            myBatches.filter(
-              (batch) =>
-                batch.statusName ===
-                "IN TRANSIT"
-            ).length,
-            "Currently in transit",
-            "→",
-          ],
+        [
+          "Pending",
+          myBatches.filter(
+            (batch) =>
+              batch.statusName === "IN TRANSIT"
+          ).length,
+          "Awaiting delivery",
+          ArrowDown,
+        ],
 
-          [
-            "Recalled",
-            myBatches.filter(
-              (batch) =>
-                batch.statusName ===
-                "RECALLED"
-            ).length,
-            "Requires attention",
-            "⚠",
-          ],
+        [
+          "Recalled",
+          myBatches.filter(
+            (batch) =>
+              batch.statusName === "RECALLED"
+          ).length,
+          "Remove from sale",
+          AlertTriangle,
+        ],
+      ];
+    }
 
-        ];
+    if (role === "customer") {
+      return [
+        [
+          "Purchased",
+          myBatches.filter(
+            (batch) =>
+              batch.statusName === "SOLD"
+          ).length,
+          "Blockchain purchases",
+          CheckCircle2,
+        ],
 
-      }
+        [
+          "Verified",
+          myBatches.length,
+          "Owned batches",
+          ShieldCheck,
+        ],
 
+        [
+          "Recalled",
+          myBatches.filter(
+            (batch) =>
+              batch.statusName === "RECALLED"
+          ).length,
+          "Recall warnings",
+          AlertTriangle,
+        ],
 
-      if (role === "distributor") {
+        [
+          "History Events",
+          visibleActivity.length,
+          "Traceability events",
+          Activity,
+        ],
+      ];
+    }
 
-        return [
-
-          [
-            "Incoming",
-            myBatches.filter(
-              (batch) =>
-                batch.statusName ===
-                "IN TRANSIT"
-            ).length,
-            "Batches in transit",
-            "↓",
-          ],
-
-          [
-            "In Transit",
-            myBatches.filter(
-              (batch) =>
-                batch.statusName ===
-                "IN TRANSIT"
-            ).length,
-            "Currently held",
-            "→",
-          ],
-
-          [
-            "Received",
-            myBatches.filter(
-              (batch) =>
-                batch.statusName ===
-                "DELIVERED"
-            ).length,
-            "Delivered batches",
-            "✓",
-          ],
-
-          [
-            "Active Batches",
-            myBatches.filter(
-              (batch) =>
-                batch.statusName ===
-                "ACTIVE"
-            ).length,
-            "Currently owned",
-            "◫",
-          ],
-
-        ];
-
-      }
-
-
-      if (role === "retailer") {
-
-        return [
-
-          [
-            "Received",
-            myBatches.filter(
-              (batch) =>
-                batch.statusName ===
-                "DELIVERED"
-            ).length,
-            "Delivered batches",
-            "✓",
-          ],
-
-          [
-            "Available",
-            myBatches.filter(
-              (batch) =>
-                batch.statusName ===
-                "DELIVERED" ||
-                batch.statusName ===
-                "ACTIVE"
-            ).length,
-            "Retail-ready inventory",
-            "◫",
-          ],
-
-          [
-            "Pending",
-            myBatches.filter(
-              (batch) =>
-                batch.statusName ===
-                "IN TRANSIT"
-            ).length,
-            "Awaiting delivery",
-            "↓",
-          ],
-
-          [
-            "Recalled",
-            myBatches.filter(
-              (batch) =>
-                batch.statusName ===
-                "RECALLED"
-            ).length,
-            "Remove from sale",
-            "⚠",
-          ],
-
-        ];
-
-      }
-
-
-      if (role === "customer") {
-
-        return [
-
-          [
-            "Purchased",
-            myBatches.filter(
-              (batch) =>
-                batch.statusName ===
-                "SOLD"
-            ).length,
-            "Blockchain purchases",
-            "✓",
-          ],
-
-          [
-            "Verified",
-            myBatches.length,
-            "Owned batches",
-            "◉",
-          ],
-
-          [
-            "Recalled",
-            myBatches.filter(
-              (batch) =>
-                batch.statusName ===
-                "RECALLED"
-            ).length,
-            "Recall warnings",
-            "⚠",
-          ],
-
-          [
-            "History Events",
-            visibleActivity.length,
-            "Traceability events",
-            "↗",
-          ],
-
-        ];
-
-      }
-
-
-      return [];
-
-    },
-    [
-      role,
-      organizations,
-      products,
-      batches,
-      activity,
-      myProducts,
-      myBatches,
-      visibleActivity,
-    ]
-  );
+    return [];
+  },
+  [
+    role,
+    organizations,
+    products,
+    batches,
+    activity,
+    myProducts,
+    myBatches,
+    visibleActivity,
+  ]
+);
 
 
   /*
@@ -1192,7 +1160,7 @@ export default function DashboardPage({
                   to="/app/history"
                   className="text-link"
                 >
-                  View all →
+                  View all
                 </Link>
 
               </div>
@@ -1319,7 +1287,7 @@ export default function DashboardPage({
                 to="/app/batches"
                 className="text-link"
               >
-                View all →
+                View all
               </Link>
 
             </div>

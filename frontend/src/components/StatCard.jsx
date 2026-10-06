@@ -2,7 +2,7 @@ export default function StatCard({
   label,
   value,
   change,
-  icon,
+  icon: Icon,
 }) {
   return (
     <div className="stat-card">
@@ -14,7 +14,13 @@ export default function StatCard({
         </span>
 
         <span className="stat-icon">
-          {icon}
+          {Icon && (
+            <Icon
+              size={22}
+              strokeWidth={2}
+              aria-hidden="true"
+            />
+          )}
         </span>
 
       </div>
