@@ -1,17 +1,17 @@
-import {
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
-
+import { useCallback, useEffect, useState, } from "react";
 import { Link, useParams } from "react-router-dom";
-
-import StatusBadge from "../components/StatusBadge";
-
 import {
-  getReadOnlyContract,
+  AlertTriangle,
+  Blocks,
+  CheckCircle2,
+  CircleAlert,
+  LoaderCircle,
+  MapPin,
+  Package,
+} from "lucide-react";
+import StatusBadge from "../components/StatusBadge";
+import { getReadOnlyContract,
 } from "../blockchain/contract";
-
 const STATUS_LABELS = {
   0: "ACTIVE",
   1: "SOLD",
@@ -19,7 +19,6 @@ const STATUS_LABELS = {
   3: "IN TRANSIT",
   4: "DELIVERED",
 };
-
 const ROLE_LABELS = {
   0: "NONE",
   1: "ADMIN",
@@ -28,38 +27,31 @@ const ROLE_LABELS = {
   4: "RETAILER",
   5: "CUSTOMER",
 };
-
 function formatDate(timestamp) {
   if (!timestamp) {
     return "—";
   }
-
   return new Date(
     Number(timestamp) * 1000
   ).toLocaleDateString();
 }
-
 function formatDateTime(timestamp) {
   if (!timestamp) {
     return "—";
   }
-
   return new Date(
     Number(timestamp) * 1000
   ).toLocaleString();
 }
-
 function shortenAddress(address) {
   if (!address) {
     return "—";
   }
-
   return `${address.slice(
     0,
     6
   )}...${address.slice(-4)}`;
 }
-
 function formatMRP(value) {
   if (
     value === undefined ||
@@ -67,53 +59,38 @@ function formatMRP(value) {
   ) {
     return "—";
   }
-
   return `₹${Number(
     value
   ).toLocaleString()}`;
 }
-
 export default function VerifyPage() {
   const { batchId: routeBatchId } =
     useParams();
-
   const [contract] = useState(() =>
     getReadOnlyContract()
   );
-
   const [batchIds, setBatchIds] =
     useState([]);
-
   const [batchInput, setBatchInput] =
     useState(routeBatchId || "");
-
   const [selectedBatchId, setSelectedBatchId] =
     useState(routeBatchId || "");
-
   const [batch, setBatch] =
     useState(null);
-
   const [product, setProduct] =
     useState(null);
-
   const [manufacturer, setManufacturer] =
     useState(null);
-
   const [history, setHistory] =
     useState([]);
-
   const [verification, setVerification] =
     useState(null);
-
   const [loadingBatches, setLoadingBatches] =
     useState(true);
-
   const [loading, setLoading] =
     useState(false);
-
   const [error, setError] =
     useState("");
-
   /*
    * Load every batch ID from blockchain.
    */
@@ -121,12 +98,9 @@ export default function VerifyPage() {
     useCallback(async () => {
       try {
         setLoadingBatches(true);
-
         const ids =
           await contract.getBatchIds();
-
         setBatchIds(ids);
-
         /*
          * If URL contains a valid batch,
          * keep it.
@@ -138,7 +112,6 @@ export default function VerifyPage() {
           setSelectedBatchId(
             routeBatchId
           );
-
           setBatchInput(
             routeBatchId
           );
@@ -159,7 +132,6 @@ export default function VerifyPage() {
           "Failed to load batch IDs:",
           err
         );
-
         setError(
           err?.shortMessage ||
             err?.message ||
@@ -172,7 +144,6 @@ export default function VerifyPage() {
       contract,
       routeBatchId,
     ]);
-
   /*
    * Verify a specific batch.
    */
@@ -181,18 +152,15 @@ export default function VerifyPage() {
       async (batchId) => {
         const cleanBatchId =
           batchId?.trim();
-
         if (!cleanBatchId) {
           setError(
             "Please enter or select a batch ID."
           );
           return;
         }
-
         try {
           setLoading(true);
           setError("");
-
           /*
            * First verify that the batch exists.
            */
@@ -203,12 +171,10 @@ export default function VerifyPage() {
             contract.getBatch(
               cleanBatchId
             ),
-
             contract.verifyBatch(
               cleanBatchId
             ),
           ]);
-
           /*
            * Product and history.
            */
@@ -219,24 +185,21 @@ export default function VerifyPage() {
             contract.getProduct(
               batchData.productId
             ),
-
             contract.getBatchHistory(
               cleanBatchId
             ),
           ]);
 
-          /*
+          /*
            * Resolve manufacturer.
            */
           let manufacturerData =
             null;
-
           try {
             const organizationId =
               await contract.organizationIdByAddress(
                 productData.manufacturer
               );
-
             if (organizationId) {
               manufacturerData =
                 await contract.getOrganization(
@@ -249,7 +212,6 @@ export default function VerifyPage() {
               err
             );
           }
-
           /*
            * Resolve history actors.
            */
@@ -262,13 +224,11 @@ export default function VerifyPage() {
                 ) => {
                   let actorOrganization =
                     null;
-
                   try {
                     const organizationId =
                       await contract.organizationIdByAddress(
                         event.actor
                       );
-
                     if (
                       organizationId
                     ) {
@@ -283,7 +243,6 @@ export default function VerifyPage() {
                       err
                     );
                   }
-
                   return {
                     id: index,
                     eventType:
@@ -309,43 +268,33 @@ export default function VerifyPage() {
                 }
               )
             );
-
           setBatch(
             batchData
           );
-
           setProduct(
             productData
           );
-
           setManufacturer(
             manufacturerData
           );
-
           setHistory(
             formattedHistory
           );
-
           setVerification({
             valid:
               verificationData.valid,
-
             recalled:
               verificationData.recalled,
-
             currentOwner:
               verificationData.currentOwner,
-
             status:
               Number(
                 verificationData.status
               ),
           });
-
           setSelectedBatchId(
             cleanBatchId
           );
-
           setBatchInput(
             cleanBatchId
           );
@@ -354,13 +303,11 @@ export default function VerifyPage() {
             "Batch verification failed:",
             err
           );
-
           setBatch(null);
           setProduct(null);
           setManufacturer(null);
           setHistory([]);
           setVerification(null);
-
           setError(
             err?.shortMessage ||
               err?.reason ||
@@ -372,14 +319,12 @@ export default function VerifyPage() {
       },
       [contract]
     );
-
   /*
    * Initial batch list.
    */
   useEffect(() => {
     loadBatchIds();
   }, [loadBatchIds]);
-
   /*
    * If URL contains a batch ID,
    * automatically verify it.
@@ -396,49 +341,38 @@ export default function VerifyPage() {
     batchIds,
     verifyBatch,
   ]);
-
   function handleDropdownChange(
     event
   ) {
     const value =
       event.target.value;
-
     setBatchInput(value);
-
     if (value) {
       verifyBatch(value);
     }
   }
-
   function handleSubmit(event) {
     event.preventDefault();
-
     verifyBatch(batchInput);
   }
-
   const status =
     verification?.status ??
     (batch
       ? Number(batch.status)
       : null);
-
   const statusLabel =
     STATUS_LABELS[status] ||
     "UNKNOWN";
-
   const isRecalled =
     Boolean(
       verification?.recalled ||
       batch?.recalled ||
       status === 2
     );
-
   return (
     <div className="verify-page">
-
       {/* HEADER */}
       <header className="verify-header">
-
         <Link
           className="public-brand"
           to="/"
@@ -446,48 +380,37 @@ export default function VerifyPage() {
           <span className="brand-mark">
             F
           </span>
-
           <span>
             FoodTrace
           </span>
         </Link>
-
         <span className="verified-network">
-          ⌁ Blockchain verification
+          <Blocks size={16} strokeWidth={2} aria-hidden="true" /> Blockchain verification
         </span>
-
       </header>
-
       <main className="verify-main">
-
         {/* INTRO */}
         <div className="verify-intro">
-
           <div className="verified-icon">
             {loading
-              ? "…"
+              ? <LoaderCircle size={30} strokeWidth={2} className="spin" aria-label="Loading" />
               : isRecalled
-              ? "!"
-              : "✓"}
+              ? <AlertTriangle size={30} strokeWidth={2} aria-label="Recalled" />
+              : <CheckCircle2 size={30} strokeWidth={2} aria-label="Verified" />}
           </div>
-
           <div className="eyebrow">
             PUBLIC VERIFICATION
           </div>
-
           <h1>
             Verify any food batch
           </h1>
-
           <p>
             Enter a batch ID or select a
             batch to verify its authenticity
             and supply-chain history directly
             from the blockchain.
           </p>
-
         </div>
-
         {/* BATCH SEARCH */}
         <section
           className="verification-card"
@@ -495,21 +418,16 @@ export default function VerifyPage() {
             marginBottom: 20,
           }}
         >
-
           <div className="panel-header">
-
             <div>
               <h2>
                 Verify batch
               </h2>
-
               <p>
                 Search the FoodTrace blockchain.
               </p>
             </div>
-
           </div>
-
           <form
             onSubmit={handleSubmit}
             style={{
@@ -519,7 +437,6 @@ export default function VerifyPage() {
               marginTop: 16,
             }}
           >
-
             <input
               value={batchInput}
               onChange={(event) =>
@@ -533,7 +450,6 @@ export default function VerifyPage() {
                 minWidth: 250,
               }}
             />
-
             <button
               type="submit"
               className="button button-primary"
@@ -543,19 +459,15 @@ export default function VerifyPage() {
                 ? "Verifying..."
                 : "Verify Batch"}
             </button>
-
           </form>
-
           <div
             style={{
               marginTop: 14,
             }}
           >
-
             <label>
               Or select an existing batch
             </label>
-
             <select
               value={selectedBatchId}
               onChange={
@@ -569,11 +481,9 @@ export default function VerifyPage() {
                 marginTop: 6,
               }}
             >
-
               <option value="">
                 Select a batch
               </option>
-
               {batchIds.map(
                 (id) => (
                   <option
@@ -584,56 +494,41 @@ export default function VerifyPage() {
                   </option>
                 )
               )}
-
             </select>
-
           </div>
-
         </section>
-
         {/* ERROR */}
         {error && (
           <section className="verification-card">
-
             <div className="alert alert-danger">
-
               <span>
-                ⚠
+                <CircleAlert size={20} strokeWidth={2} />
               </span>
-
               <div>
                 <strong>
                   Verification failed
                 </strong>
-
                 <p>
                   {error}
                 </p>
               </div>
-
             </div>
-
           </section>
         )}
-
         {/* LOADING */}
         {loading && (
           <section className="verification-card">
-
             <p>
               Reading batch information
               from the blockchain...
             </p>
-
           </section>
         )}
-
         {/* RESULT */}
         {!loading &&
           !error &&
           batch && (
             <>
-
               {/* BATCH INFORMATION */}
               <section
                 className={`verification-card ${
@@ -642,36 +537,26 @@ export default function VerifyPage() {
                     : ""
                 }`}
               >
-
                 <div className="verification-head">
-
                   <div className="product-art large">
-                    🥫
+                    <Package size={42} strokeWidth={1.8} />
                   </div>
-
                   <div>
-
                     <span className="eyebrow">
                       PRODUCT
                     </span>
-
                     <h2>
                       {product?.name ||
                         batch.productId}
                     </h2>
-
                     <p>
                       {batch.batchId}
                     </p>
-
                   </div>
-
                   <StatusBadge>
                     {statusLabel}
                   </StatusBadge>
-
                 </div>
-
                 {/* VERIFICATION RESULT */}
                 <div
                   style={{
@@ -685,13 +570,20 @@ export default function VerifyPage() {
                         : "#f0fdf4",
                   }}
                 >
-
                   <strong>
-                    {verification?.valid
-                      ? "✓ Batch verified on blockchain"
-                      : "⚠ Batch verification failed"}
-                  </strong>
+                    {verification?.valid ? (
+                  <>
+                    Batch verified on blockchain
+                  </>
 
+                ) : (
+
+                  <>
+                    Batch verification failed
+                  </>
+
+                )}
+                  </strong>
                   <p
                     style={{
                       margin:
@@ -703,29 +595,22 @@ export default function VerifyPage() {
                       verification?.currentOwner
                     )}
                   </p>
-
                 </div>
-
                 {/* RECALL WARNING */}
                 {isRecalled && (
                   <div className="alert alert-danger">
-
                     <span>
-                      ⚠
+                      <CircleAlert size={20} strokeWidth={2} />
                     </span>
-
                     <div>
-
                       <strong>
                         RECALLED
                       </strong>
-
                       <p>
                         This batch has been
                         recalled. Do not consume
                         or sell this product.
                       </p>
-
                       {batch.recallReason && (
                         <p>
                           Reason:{" "}
@@ -734,20 +619,15 @@ export default function VerifyPage() {
                           }
                         </p>
                       )}
-
                     </div>
-
                   </div>
                 )}
-
                 {/* DETAILS */}
                 <div className="verify-details">
-
                   <div>
                     <span>
                       Manufacturer
                     </span>
-
                     <strong>
                       {manufacturer?.name ||
                         shortenAddress(
@@ -755,36 +635,30 @@ export default function VerifyPage() {
                         )}
                     </strong>
                   </div>
-
                   <div>
                     <span>
                       Manufacturing date
                     </span>
-
                     <strong>
                       {formatDate(
                         batch.manufacturingDate
                       )}
                     </strong>
                   </div>
-
                   <div>
                     <span>
                       Expiry date
                     </span>
-
                     <strong>
                       {formatDate(
                         batch.expiryDate
                       )}
                     </strong>
                   </div>
-
                   <div>
                     <span>
                       Quantity
                     </span>
-
                     <strong>
                       {Number(
                         batch.quantity
@@ -792,77 +666,59 @@ export default function VerifyPage() {
                       units
                     </strong>
                   </div>
-
                   <div>
                     <span>
                       MRP
                     </span>
-
                     <strong>
                       {formatMRP(
                         batch.mrp
                       )}
                     </strong>
                   </div>
-
                   <div>
                     <span>
                       Created
                     </span>
-
                     <strong>
                       {formatDate(
                         batch.createdAt
                       )}
                     </strong>
                   </div>
-
                   <div>
                     <span>
                       Current status
                     </span>
-
                     <StatusBadge>
                       {statusLabel}
                     </StatusBadge>
                   </div>
-
                   <div>
                     <span>
                       Current owner
                     </span>
-
                     <strong>
                       {shortenAddress(
                         verification?.currentOwner
                       )}
                     </strong>
                   </div>
-
                 </div>
-
               </section>
-
               {/* HISTORY */}
               <section className="verification-card">
-
                 <div className="panel-header">
-
                   <div>
-
                     <h2>
                       Supply-chain journey
                     </h2>
-
                     <p>
                       Every recorded event
                       comes from the blockchain.
                     </p>
-
                   </div>
-
                 </div>
-
                 {history.length ===
                 0 ? (
                   <p>
@@ -880,7 +736,6 @@ export default function VerifyPage() {
                       marginTop: 20,
                     }}
                   >
-
                     {history.map(
                       (
                         event,
@@ -898,7 +753,6 @@ export default function VerifyPage() {
                             gap: 14,
                           }}
                         >
-
                           <div
                             style={{
                               display:
@@ -909,7 +763,6 @@ export default function VerifyPage() {
                                 "center",
                             }}
                           >
-
                             <div
                               style={{
                                 width: 32,
@@ -934,7 +787,6 @@ export default function VerifyPage() {
                             >
                               {index + 1}
                             </div>
-
                             {index <
                               history.length -
                                 1 && (
@@ -949,16 +801,13 @@ export default function VerifyPage() {
                                 }}
                               />
                             )}
-
                           </div>
-
                           <div
                             style={{
                               paddingBottom:
                                 10,
                             }}
                           >
-
                             <div
                               style={{
                                 display:
@@ -970,9 +819,7 @@ export default function VerifyPage() {
                                   "wrap",
                               }}
                             >
-
                               <div>
-
                                 <h3
                                   style={{
                                     margin: 0,
@@ -982,7 +829,6 @@ export default function VerifyPage() {
                                     event.eventType
                                   }
                                 </h3>
-
                                 {event.organization && (
                                   <p
                                     style={{
@@ -997,9 +843,7 @@ export default function VerifyPage() {
                                     }
                                   </p>
                                 )}
-
                               </div>
-
                               <span
                                 style={{
                                   fontSize:
@@ -1012,9 +856,7 @@ export default function VerifyPage() {
                                   event.timestamp
                                 )}
                               </span>
-
                             </div>
-
                             {event.location && (
                               <p
                                 style={{
@@ -1024,13 +866,12 @@ export default function VerifyPage() {
                                     "#4b5563",
                                 }}
                               >
-                                📍{" "}
+                                <MapPin size={15} strokeWidth={2} aria-hidden="true" />{" "}
                                 {
                                   event.location
                                 }
                               </p>
                             )}
-
                             {event.notes && (
                               <p
                                 style={{
@@ -1045,7 +886,6 @@ export default function VerifyPage() {
                                 }
                               </p>
                             )}
-
                             <p
                               style={{
                                 margin:
@@ -1066,34 +906,15 @@ export default function VerifyPage() {
                                 event.actor
                               )}
                             </p>
-
                           </div>
-
                         </div>
                       )
                     )}
-
                   </div>
                 )}
-
               </section>
-
-              <div className="verification-foot">
-
-                <span>
-                  FoodTrace · Live blockchain
-                  verification
-                </span>
-
-                <Link to="/">
-                  Powered by FoodTrace →
-                </Link>
-
-              </div>
-
             </>
           )}
-
       </main>
     </div>
   );

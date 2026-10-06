@@ -31,4 +31,4 @@
 /snapshots
 
 # Ganache local blockchain data
-blockchain/ganache-data/
+ganache-data/
