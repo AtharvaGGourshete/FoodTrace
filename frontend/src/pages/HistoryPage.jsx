@@ -6,7 +6,12 @@ import {
 
 import AppShell from "../components/AppShell";
 import PageHeader from "../components/PageHeader";
-import { getReadOnlyContract } from "../blockchain/contract";
+
+import {
+  getReadOnlyContract,
+} from "../blockchain/contract";
+
+import { useWallet } from "../context/WalletContext";
 
 const STATUS_LABELS = {
   0: "ACTIVE",
@@ -31,317 +36,757 @@ function shortenAddress(address) {
     return "—";
   }
 
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  return `${address.slice(
+    0,
+    6
+  )}...${address.slice(-4)}`;
 }
 
 export default function HistoryPage({
   role = "manufacturer",
 }) {
+  // ============================================================
+  // WALLET
+  // ============================================================
+
+  const {
+    address,
+    role: walletRole,
+  } = useWallet();
+
+  // ============================================================
+  // CONTRACT
+  // ============================================================
+
   const [contract] = useState(() =>
     getReadOnlyContract()
   );
 
-  const [batchIds, setBatchIds] = useState([]);
-  const [selectedBatchId, setSelectedBatchId] =
-    useState("BATCH-2026-001");
+  // ============================================================
+  // BATCHES
+  // ============================================================
 
-  const [batch, setBatch] = useState(null);
-  const [product, setProduct] = useState(null);
-  const [history, setHistory] = useState([]);
+  const [batchIds, setBatchIds] =
+    useState([]);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [
+    selectedBatchId,
+    setSelectedBatchId,
+  ] = useState("");
 
-  /*
-   * Load all available batch IDs
-   */
-  const loadBatchIds = useCallback(async () => {
-    try {
-      setError("");
+  const [batch, setBatch] =
+    useState(null);
 
-      const ids = await contract.getBatchIds();
+  const [product, setProduct] =
+    useState(null);
 
-      setBatchIds(ids);
+  const [history, setHistory] =
+    useState([]);
 
-      if (
-        ids.length > 0 &&
-        !ids.includes(selectedBatchId)
-      ) {
-        setSelectedBatchId(ids[0]);
-      }
-    } catch (err) {
-      console.error(
-        "Failed to load batch IDs:",
-        err
-      );
+  // ============================================================
+  // STATE
+  // ============================================================
 
-      setError(
-        err?.shortMessage ||
-          err?.message ||
-          "Failed to load batch IDs."
-      );
-    }
-  }, [contract, selectedBatchId]);
+  const [loading, setLoading] =
+    useState(true);
 
-  /*
-   * Load selected batch + product + blockchain history
-   */
-  const loadHistory = useCallback(
-    async (batchId) => {
+  const [error, setError] =
+    useState("");
+
+  // ============================================================
+  // ROLE HELPERS
+  // ============================================================
+
+  const isDistributor =
+    walletRole?.name ===
+    "DISTRIBUTOR";
+
+  const isRetailer =
+    walletRole?.name ===
+    "RETAILER";
+
+  // ============================================================
+  // LOAD BATCH IDS
+  // ============================================================
+  //
+  // Important:
+  //
+  // We do NOT simply load every batch ID anymore.
+  //
+  // For distributor:
+  //     currentOwner == wallet
+  //     AND status == IN_TRANSIT
+  //
+  // For retailer:
+  //     currentOwner == wallet
+  //     AND status == DELIVERED
+  //
+  // Manufacturer/Admin:
+  //     all batches
+  //
+  // ============================================================
+
+  const loadBatchIds =
+    useCallback(async () => {
       try {
         setLoading(true);
         setError("");
 
-        /*
-         * First get the batch because we need
-         * batch.productId to load the product.
-         */
-        const batchData =
-          await contract.getBatch(batchId);
+        const ids =
+          await contract.getBatchIds();
 
-        /*
-         * Product and history can be loaded
-         * at the same time.
-         */
-        const [productData, historyData] =
-          await Promise.all([
-            contract.getProduct(
-              batchData.productId
-            ),
-            contract.getBatchHistory(batchId),
-          ]);
+        // --------------------------------------------------------
+        // ADMIN / MANUFACTURER
+        // --------------------------------------------------------
 
-        setBatch(batchData);
-        setProduct(productData);
+        if (
+          !isDistributor &&
+          !isRetailer
+        ) {
+          setBatchIds(ids);
 
-        /*
-         * Resolve each history actor to an
-         * organization name where possible.
-         */
-        const formattedHistory =
-          await Promise.all(
-            historyData.map(
-              async (item, index) => {
-                let actorOrganization = null;
-
-                try {
-                  const organizationId =
-                    await contract.organizationIdByAddress(
-                      item.actor
-                    );
-
-                  if (organizationId) {
-                    actorOrganization =
-                      await contract.getOrganization(
-                        organizationId
-                      );
-                  }
-                } catch (orgError) {
-                  console.warn(
-                    "Could not resolve actor organization:",
-                    orgError
-                  );
+          if (ids.length > 0) {
+            setSelectedBatchId(
+              (currentSelected) => {
+                if (
+                  currentSelected &&
+                  ids.includes(
+                    currentSelected
+                  )
+                ) {
+                  return currentSelected;
                 }
 
-                return {
-                  id: index,
-                  eventType: item.eventType,
-                  actor: item.actor,
-                  timestamp: item.timestamp,
-                  location: item.location,
-                  notes: item.notes,
-
-                  organization:
-                    actorOrganization?.name ||
-                    null,
-
-                  organizationRole:
-                    actorOrganization
-                      ? Number(
-                          actorOrganization.role
-                        )
-                      : null,
-                };
+                return ids[0];
               }
-            )
-          );
+            );
+          } else {
+            setSelectedBatchId("");
+          }
 
-        setHistory(formattedHistory);
+          return;
+        }
+
+        // --------------------------------------------------------
+        // DISTRIBUTOR / RETAILER
+        // --------------------------------------------------------
+
+        if (!address) {
+          setBatchIds([]);
+          setSelectedBatchId("");
+          return;
+        }
+
+        const walletAddress =
+          address.toLowerCase();
+
+        const allowedBatches =
+          [];
+
+        for (const batchId of ids) {
+          try {
+            const batchData =
+              await contract.getBatch(
+                batchId
+              );
+
+            const currentOwner =
+              batchData.currentOwner?.toLowerCase();
+
+            const status =
+              Number(
+                batchData.status
+              );
+
+            // ----------------------------------------------------
+            // DISTRIBUTOR
+            // ----------------------------------------------------
+
+            if (
+              isDistributor &&
+              currentOwner ===
+                walletAddress &&
+              status === 3
+            ) {
+              allowedBatches.push(
+                batchId
+              );
+            }
+
+            // ----------------------------------------------------
+            // RETAILER
+            // ----------------------------------------------------
+
+            if (
+              isRetailer &&
+              currentOwner ===
+                walletAddress &&
+              status === 4
+            ) {
+              allowedBatches.push(
+                batchId
+              );
+            }
+          } catch (batchError) {
+            console.warn(
+              `Could not load batch ${batchId}:`,
+              batchError
+            );
+          }
+        }
+
+        setBatchIds(
+          allowedBatches
+        );
+
+        // --------------------------------------------------------
+        // Keep currently selected batch if it is still allowed.
+        // Otherwise select the first allowed batch.
+        // --------------------------------------------------------
+
+        setSelectedBatchId(
+          (currentSelected) => {
+            if (
+              currentSelected &&
+              allowedBatches.includes(
+                currentSelected
+              )
+            ) {
+              return currentSelected;
+            }
+
+            return (
+              allowedBatches[0] || ""
+            );
+          }
+        );
       } catch (err) {
         console.error(
-          "Failed to load batch history:",
+          "Failed to load batch IDs:",
           err
         );
 
-        setBatch(null);
-        setProduct(null);
-        setHistory([]);
+        setBatchIds([]);
+        setSelectedBatchId("");
 
         setError(
           err?.shortMessage ||
             err?.message ||
-            "Failed to load batch history."
+            "Failed to load batch IDs."
         );
       } finally {
         setLoading(false);
       }
-    },
-    [contract]
-  );
+    }, [
+      contract,
+      address,
+      isDistributor,
+      isRetailer,
+    ]);
 
-  /*
-   * Load batches when page opens.
-   */
+  // ============================================================
+  // LOAD SELECTED BATCH HISTORY
+  // ============================================================
+
+  const loadHistory =
+    useCallback(
+      async (batchId) => {
+        if (!batchId) {
+          setBatch(null);
+          setProduct(null);
+          setHistory([]);
+          return;
+        }
+
+        try {
+          setLoading(true);
+          setError("");
+
+          // ------------------------------------------------------
+          // Get batch
+          // ------------------------------------------------------
+
+          const batchData =
+            await contract.getBatch(
+              batchId
+            );
+
+          // ------------------------------------------------------
+          // SECURITY CHECK
+          // ------------------------------------------------------
+          //
+          // Even though the dropdown is filtered, check again
+          // before loading the history.
+          //
+          // This prevents an old selected batch from being shown
+          // after the wallet role/account changes.
+          // ------------------------------------------------------
+
+          if (
+            isDistributor ||
+            isRetailer
+          ) {
+            if (!address) {
+              setBatch(null);
+              setProduct(null);
+              setHistory([]);
+
+              setError(
+                "Connect your wallet to view batch history."
+              );
+
+              return;
+            }
+
+            const currentOwner =
+              batchData.currentOwner?.toLowerCase();
+
+            const status =
+              Number(
+                batchData.status
+              );
+
+            const isAllowedForDistributor =
+              isDistributor &&
+              currentOwner ===
+                address.toLowerCase() &&
+              status === 3;
+
+            const isAllowedForRetailer =
+              isRetailer &&
+              currentOwner ===
+                address.toLowerCase() &&
+              status === 4;
+
+            if (
+              !isAllowedForDistributor &&
+              !isAllowedForRetailer
+            ) {
+              setBatch(null);
+              setProduct(null);
+              setHistory([]);
+
+              setError(
+                "This batch is not currently assigned to your organization."
+              );
+
+              return;
+            }
+          }
+
+          // ------------------------------------------------------
+          // Load product + history
+          // ------------------------------------------------------
+
+          const [
+            productData,
+            historyData,
+          ] = await Promise.all([
+            contract.getProduct(
+              batchData.productId
+            ),
+
+            contract.getBatchHistory(
+              batchId
+            ),
+          ]);
+
+          setBatch(batchData);
+          setProduct(productData);
+
+          // ------------------------------------------------------
+          // Resolve history actors
+          // ------------------------------------------------------
+
+          const formattedHistory =
+            await Promise.all(
+              historyData.map(
+                async (
+                  item,
+                  index
+                ) => {
+                  let actorOrganization =
+                    null;
+
+                  try {
+                    const organizationId =
+                      await contract.organizationIdByAddress(
+                        item.actor
+                      );
+
+                    if (
+                      organizationId
+                    ) {
+                      actorOrganization =
+                        await contract.getOrganization(
+                          organizationId
+                        );
+                    }
+                  } catch (
+                    orgError
+                  ) {
+                    console.warn(
+                      "Could not resolve actor organization:",
+                      orgError
+                    );
+                  }
+
+                  return {
+                    id: index,
+
+                    eventType:
+                      item.eventType,
+
+                    actor:
+                      item.actor,
+
+                    timestamp:
+                      item.timestamp,
+
+                    location:
+                      item.location,
+
+                    notes:
+                      item.notes,
+
+                    organization:
+                      actorOrganization?.name ||
+                      null,
+
+                    organizationRole:
+                      actorOrganization
+                        ? Number(
+                            actorOrganization.role
+                          )
+                        : null,
+                  };
+                }
+              )
+            );
+
+          setHistory(
+            formattedHistory
+          );
+        } catch (err) {
+          console.error(
+            "Failed to load batch history:",
+            err
+          );
+
+          setBatch(null);
+          setProduct(null);
+          setHistory([]);
+
+          setError(
+            err?.shortMessage ||
+              err?.message ||
+              "Failed to load batch history."
+          );
+        } finally {
+          setLoading(false);
+        }
+      },
+      [
+        contract,
+        address,
+        isDistributor,
+        isRetailer,
+      ]
+    );
+
+  // ============================================================
+  // LOAD BATCHES WHEN PAGE / WALLET / ROLE CHANGES
+  // ============================================================
+
   useEffect(() => {
     loadBatchIds();
   }, [loadBatchIds]);
 
-  /*
-   * Load history whenever the selected
-   * batch changes.
-   */
+  // ============================================================
+  // LOAD HISTORY WHEN SELECTED BATCH CHANGES
+  // ============================================================
+
   useEffect(() => {
     if (selectedBatchId) {
-      loadHistory(selectedBatchId);
+      loadHistory(
+        selectedBatchId
+      );
+    } else {
+      setBatch(null);
+      setProduct(null);
+      setHistory([]);
     }
-  }, [selectedBatchId, loadHistory]);
+  }, [
+    selectedBatchId,
+    loadHistory,
+  ]);
+
+  // ============================================================
+  // ROLE-SPECIFIC PAGE TEXT
+  // ============================================================
+
+  let pageTitle =
+    "Supply-chain history";
+
+  let pageDescription =
+    "A chronological view of recorded product and batch events from the blockchain.";
+
+  if (isDistributor) {
+    pageTitle =
+      "Incoming batch history";
+
+    pageDescription =
+      "View blockchain history for batches currently in transit to your distribution organization.";
+  }
+
+  if (isRetailer) {
+    pageTitle =
+      "Incoming batch history";
+
+    pageDescription =
+      "View blockchain history for batches currently delivered to your retail organization.";
+  }
+
+  // ============================================================
+  // RENDER
+  // ============================================================
 
   return (
     <AppShell role={role}>
       <PageHeader
         eyebrow="TRACEABILITY"
-        title="Supply-chain history"
-        description="A chronological view of recorded product and batch events from the blockchain."
+        title={pageTitle}
+        description={
+          pageDescription
+        }
       />
 
-      {/* ERROR */}
+      {/* ======================================================
+          ERROR
+          ====================================================== */}
+
       {error && (
         <div
           className="panel"
-          style={{ marginBottom: 20 }}
+          style={{
+            marginBottom: 20,
+          }}
         >
-          <p style={{ color: "#dc2626" }}>
+          <p
+            style={{
+              color: "#dc2626",
+            }}
+          >
             {error}
           </p>
         </div>
       )}
 
-      {/* BATCH SELECTOR */}
+      {/* ======================================================
+          ROLE INFO
+          ====================================================== */}
+
+      {(isDistributor ||
+        isRetailer) && (
+        <div
+          className="panel"
+          style={{
+            marginBottom: 20,
+            padding: "14px 18px",
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              color: "#475569",
+              fontSize: "14px",
+            }}
+          >
+            {isDistributor
+              ? "Only batches currently in transit to your distributor wallet are shown."
+              : "Only batches currently delivered to your retailer wallet are shown."}
+          </p>
+        </div>
+      )}
+
+      {/* ======================================================
+          BATCH SELECTOR
+          ====================================================== */}
+
       <div
         className="panel"
-        style={{ marginBottom: 20 }}
+        style={{
+          marginBottom: 20,
+        }}
       >
         <div className="panel-header">
           <div>
-            <h2>Select batch</h2>
+            <h2>
+              Select batch
+            </h2>
 
             <p>
-              View the immutable history recorded
-              for a batch.
+              {isDistributor
+                ? "View the immutable history of batches currently assigned to you."
+                : isRetailer
+                ? "View the immutable history of batches currently delivered to you."
+                : "View the immutable history recorded for a batch."}
             </p>
           </div>
 
           <select
-            value={selectedBatchId}
+            value={
+              selectedBatchId
+            }
             onChange={(event) =>
               setSelectedBatchId(
                 event.target.value
               )
             }
-            disabled={batchIds.length === 0}
+            disabled={
+              batchIds.length ===
+              0
+            }
             style={{
-              padding: "10px 14px",
-              borderRadius: "8px",
-              border: "1px solid #d1d5db",
-              background: "white",
-              minWidth: "220px",
+              padding:
+                "10px 14px",
+              borderRadius:
+                "8px",
+              border:
+                "1px solid #d1d5db",
+              background:
+                "white",
+              minWidth:
+                "220px",
             }}
           >
-            {batchIds.length === 0 ? (
+            {batchIds.length ===
+            0 ? (
               <option value="">
-                No batches found
+                {isDistributor
+                  ? "No incoming batches"
+                  : isRetailer
+                  ? "No delivered batches"
+                  : "No batches found"}
               </option>
             ) : (
-              batchIds.map((id) => (
-                <option key={id} value={id}>
-                  {id}
-                </option>
-              ))
+              batchIds.map(
+                (id) => (
+                  <option
+                    key={id}
+                    value={id}
+                  >
+                    {id}
+                  </option>
+                )
+              )
             )}
           </select>
         </div>
       </div>
 
-      {/* LOADING */}
+      {/* ======================================================
+          LOADING
+          ====================================================== */}
+
       {loading ? (
         <div className="panel">
           <p>
-            Loading blockchain history...
+            Loading blockchain
+            history...
           </p>
         </div>
       ) : !batch ? (
-        /* NO BATCH */
         <div className="panel">
-          <p>No batch data found.</p>
+          <p>
+            {isDistributor
+              ? "No batches are currently in transit to your distributor wallet."
+              : isRetailer
+              ? "No batches are currently delivered to your retailer wallet."
+              : "No batch data found."}
+          </p>
         </div>
       ) : (
         <div className="history-layout">
-          {/* HISTORY TIMELINE */}
+
+          {/* ==================================================
+              HISTORY TIMELINE
+              ================================================== */}
+
           <section className="panel">
             <div className="panel-header">
               <div>
-                <h2>{batch.batchId}</h2>
+                <h2>
+                  {batch.batchId}
+                </h2>
 
                 <p>
                   {product?.name ||
                     batch.productId}
                   {" · "}
-                  {batch.quantity.toString()} units
+                  {batch.quantity.toString()}{" "}
+                  units
                 </p>
               </div>
 
               <span className="status-badge active">
                 {STATUS_LABELS[
-                  Number(batch.status)
-                ] || "UNKNOWN"}
+                  Number(
+                    batch.status
+                  )
+                ] ||
+                  "UNKNOWN"}
               </span>
             </div>
 
-            {history.length === 0 ? (
+            {history.length ===
+            0 ? (
               <div
                 style={{
-                  padding: "20px 0",
+                  padding:
+                    "20px 0",
                 }}
               >
                 <p>
-                  No history recorded for this
-                  batch.
+                  No history recorded
+                  for this batch.
                 </p>
               </div>
             ) : (
               <div
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
+                  display:
+                    "flex",
+                  flexDirection:
+                    "column",
                   gap: "18px",
-                  marginTop: "20px",
+                  marginTop:
+                    "20px",
                 }}
               >
                 {history.map(
-                  (item, index) => (
+                  (
+                    item,
+                    index
+                  ) => (
                     <div
-                      key={item.id}
+                      key={
+                        item.id
+                      }
                       style={{
-                        display: "grid",
+                        display:
+                          "grid",
                         gridTemplateColumns:
                           "32px 1fr",
                         gap: "14px",
                       }}
                     >
                       {/* TIMELINE NUMBER */}
+
                       <div
                         style={{
-                          display: "flex",
+                          display:
+                            "flex",
                           flexDirection:
                             "column",
                           alignItems:
@@ -350,31 +795,42 @@ export default function HistoryPage({
                       >
                         <span
                           style={{
-                            width: "30px",
-                            height: "30px",
-                            borderRadius: "50%",
-                            display: "flex",
+                            width:
+                              "30px",
+                            height:
+                              "30px",
+                            borderRadius:
+                              "50%",
+                            display:
+                              "flex",
                             alignItems:
                               "center",
                             justifyContent:
                               "center",
                             background:
                               "#111827",
-                            color: "white",
-                            fontSize: "13px",
-                            fontWeight: 600,
+                            color:
+                              "white",
+                            fontSize:
+                              "13px",
+                            fontWeight:
+                              600,
                           }}
                         >
-                          {index + 1}
+                          {index +
+                            1}
                         </span>
 
                         {index <
-                          history.length - 1 && (
+                          history.length -
+                            1 && (
                           <span
                             style={{
-                              width: "2px",
+                              width:
+                                "2px",
                               flex: 1,
-                              marginTop: "6px",
+                              marginTop:
+                                "6px",
                               background:
                                 "#e5e7eb",
                             }}
@@ -383,17 +839,21 @@ export default function HistoryPage({
                       </div>
 
                       {/* EVENT DETAILS */}
+
                       <div
                         style={{
-                          paddingBottom: "10px",
+                          paddingBottom:
+                            "10px",
                         }}
                       >
                         <div
                           style={{
-                            display: "flex",
+                            display:
+                              "flex",
                             justifyContent:
                               "space-between",
-                            gap: "12px",
+                            gap:
+                              "12px",
                             flexWrap:
                               "wrap",
                           }}
@@ -404,7 +864,9 @@ export default function HistoryPage({
                                 margin: 0,
                               }}
                             >
-                              {item.eventType}
+                              {
+                                item.eventType
+                              }
                             </h3>
 
                             {item.organization && (
@@ -438,6 +900,7 @@ export default function HistoryPage({
                         </div>
 
                         {/* LOCATION */}
+
                         {item.location && (
                           <p
                             style={{
@@ -447,12 +910,14 @@ export default function HistoryPage({
                                 "#4b5563",
                             }}
                           >
-                            📍{" "}
-                            {item.location}
+                            {
+                              item.location
+                            }
                           </p>
                         )}
 
                         {/* NOTES */}
+
                         {item.notes && (
                           <p
                             style={{
@@ -462,11 +927,14 @@ export default function HistoryPage({
                                 "#4b5563",
                             }}
                           >
-                            {item.notes}
+                            {
+                              item.notes
+                            }
                           </p>
                         )}
 
                         {/* ACTOR WALLET */}
+
                         <p
                           style={{
                             margin:
@@ -490,22 +958,32 @@ export default function HistoryPage({
             )}
           </section>
 
-          {/* BATCH SUMMARY */}
+          {/* ==================================================
+              BATCH SUMMARY
+              ================================================== */}
+
           <aside className="panel">
             <div className="panel-header">
               <div>
-                <h2>Batch summary</h2>
+                <h2>
+                  Batch summary
+                </h2>
 
                 <p>
-                  Current blockchain state
+                  Current blockchain
+                  state
                 </p>
               </div>
             </div>
 
             <div className="journey-summary">
+
               {/* PRODUCT */}
+
               <div className="journey-node">
-                <span>1</span>
+                <span>
+                  1
+                </span>
 
                 <div>
                   <strong>
@@ -520,8 +998,11 @@ export default function HistoryPage({
               </div>
 
               {/* BATCH */}
+
               <div className="journey-node">
-                <span>2</span>
+                <span>
+                  2
+                </span>
 
                 <div>
                   <strong>
@@ -535,8 +1016,11 @@ export default function HistoryPage({
               </div>
 
               {/* QUANTITY */}
+
               <div className="journey-node">
-                <span>3</span>
+                <span>
+                  3
+                </span>
 
                 <div>
                   <strong>
@@ -550,14 +1034,20 @@ export default function HistoryPage({
               </div>
 
               {/* STATUS */}
+
               <div className="journey-node">
-                <span>4</span>
+                <span>
+                  4
+                </span>
 
                 <div>
                   <strong>
                     {STATUS_LABELS[
-                      Number(batch.status)
-                    ] || "UNKNOWN"}
+                      Number(
+                        batch.status
+                      )
+                    ] ||
+                      "UNKNOWN"}
                   </strong>
 
                   <small>
@@ -565,8 +1055,8 @@ export default function HistoryPage({
                   </small>
                 </div>
               </div>
-            </div>
 
+            </div>
           </aside>
         </div>
       )}

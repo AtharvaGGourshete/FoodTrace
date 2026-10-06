@@ -23,6 +23,9 @@ const ROLE_NAMES = {
     5: "CUSTOMER",
 };
 
+const DISCONNECTED_KEY =
+    "foodtrace_wallet_disconnected";
+
 const WalletContext =
     createContext(null);
 
@@ -79,6 +82,12 @@ export function WalletProvider({ children }) {
             setIsConnecting(true);
             setError(null);
 
+            // User explicitly clicked Connect,
+            // so allow a new MetaMask account selection.
+            sessionStorage.removeItem(
+                DISCONNECTED_KEY
+            );
+
             const result =
                 await connectWallet();
 
@@ -101,14 +110,37 @@ export function WalletProvider({ children }) {
     }
 
     function disconnect() {
+        // Disconnect from FoodTrace.
+        //
+        // This does NOT disconnect MetaMask itself.
+        // MetaMask remains installed/connected,
+        // but FoodTrace will no longer restore
+        // the wallet automatically.
         setAddress(null);
         setRole(null);
         setError(null);
+
+        sessionStorage.setItem(
+            DISCONNECTED_KEY,
+            "true"
+        );
     }
 
     useEffect(() => {
         async function checkExistingWallet() {
             try {
+                // If the user previously clicked
+                // FoodTrace Disconnect, do not
+                // automatically reconnect on refresh.
+                const wasDisconnected =
+                    sessionStorage.getItem(
+                        DISCONNECTED_KEY
+                    ) === "true";
+
+                if (wasDisconnected) {
+                    return;
+                }
+
                 const wallet =
                     await getConnectedWallet();
 
@@ -138,6 +170,20 @@ export function WalletProvider({ children }) {
                     return;
                 }
 
+                // If FoodTrace was explicitly
+                // disconnected, don't automatically
+                // log the new MetaMask account in.
+                const wasDisconnected =
+                    sessionStorage.getItem(
+                        DISCONNECTED_KEY
+                    ) === "true";
+
+                if (wasDisconnected) {
+                    return;
+                }
+
+                // Normal account switching while
+                // FoodTrace is connected.
                 await loadWallet(
                     accounts[0]
                 );
@@ -161,6 +207,7 @@ export function WalletProvider({ children }) {
             value={{
                 address,
                 role,
+
                 isConnected:
                     Boolean(address),
 

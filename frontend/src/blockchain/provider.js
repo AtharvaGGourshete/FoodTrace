@@ -26,18 +26,54 @@ export async function connectWallet() {
         );
     }
 
+    /*
+     * Ask MetaMask to open its account/permission
+     * selection UI.
+     *
+     * This is important because using only
+     * eth_requestAccounts can reuse the account
+     * that is already connected to the site.
+     */
+    await window.ethereum.request({
+        method: "wallet_requestPermissions",
+        params: [
+            {
+                eth_accounts: {},
+            },
+        ],
+    });
+
     const provider =
         new ethers.BrowserProvider(
             window.ethereum
         );
 
-    await provider.send(
-        "eth_requestAccounts",
-        []
-    );
+    /*
+     * Get the accounts currently selected/allowed
+     * for FoodTrace by MetaMask.
+     */
+    const accounts =
+        await provider.send(
+            "eth_accounts",
+            []
+        );
+
+    if (accounts.length === 0) {
+        throw new Error(
+            "No MetaMask account was selected."
+        );
+    }
+
+    /*
+     * MetaMask places the selected account first.
+     */
+    const selectedAddress =
+        accounts[0];
 
     const signer =
-        await provider.getSigner();
+        await provider.getSigner(
+            selectedAddress
+        );
 
     const address =
         await signer.getAddress();

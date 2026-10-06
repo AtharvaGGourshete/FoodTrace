@@ -4,12 +4,23 @@ import {
   useState,
 } from "react";
 
+import {
+  Building2,
+  MapPin,
+  Plus,
+} from "lucide-react";
+
 import AppShell from "../components/AppShell";
 import PageHeader from "../components/PageHeader";
 import DataTable from "../components/DataTable";
 import StatusBadge from "../components/StatusBadge";
 
-import { getReadOnlyContract } from "../blockchain/contract";
+import {
+  getReadOnlyContract,
+  getSignerContract,
+} from "../blockchain/contract";
+
+import { getMetaMaskProvider } from "../blockchain/provider";
 
 const ROLE_LABELS = {
   0: "NONE",
@@ -18,6 +29,14 @@ const ROLE_LABELS = {
   3: "DISTRIBUTOR",
   4: "RETAILER",
   5: "CUSTOMER",
+};
+
+const ROLE_VALUES = {
+  ADMIN: 1,
+  MANUFACTURER: 2,
+  DISTRIBUTOR: 3,
+  RETAILER: 4,
+  CUSTOMER: 5,
 };
 
 function shortenAddress(address) {
@@ -36,8 +55,25 @@ export default function OrganizationsPage() {
   const [organizations, setOrganizations] =
     useState([]);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState("");
+
+  const [showForm, setShowForm] =
+    useState(false);
+
+  const [submitting, setSubmitting] =
+    useState(false);
+
+  const [form, setForm] = useState({
+    organizationId: "",
+    name: "",
+    walletAddress: "",
+    role: "MANUFACTURER",
+    location: "",
+  });
 
   const loadOrganizations =
     useCallback(async () => {
@@ -45,17 +81,9 @@ export default function OrganizationsPage() {
         setLoading(true);
         setError("");
 
-        /*
-         * Get all registered organization IDs
-         * directly from the smart contract.
-         */
         const organizationIds =
           await contract.getOrganizationIds();
 
-        /*
-         * Load organization details and batch
-         * counts.
-         */
         const organizationData =
           await Promise.all(
             organizationIds.map(
@@ -83,9 +111,10 @@ export default function OrganizationsPage() {
                 return {
                   id: organization.organizationId,
                   name: organization.name,
-                  type: ROLE_LABELS[
-                    Number(organization.role)
-                  ] || "UNKNOWN",
+                  type:
+                    ROLE_LABELS[
+                      Number(organization.role)
+                    ] || "UNKNOWN",
                   wallet:
                     organization.walletAddress,
                   batches: batchCount,
@@ -124,6 +153,96 @@ export default function OrganizationsPage() {
     loadOrganizations();
   }, [loadOrganizations]);
 
+  function handleChange(event) {
+    const {
+      name,
+      value,
+    } = event.target;
+
+    setForm((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  }
+
+  async function handleRegister(event) {
+    event.preventDefault();
+
+    if (
+      !form.organizationId.trim() ||
+      !form.name.trim() ||
+      !form.walletAddress.trim() ||
+      !form.location.trim()
+    ) {
+      setError(
+        "Please fill in all organization fields."
+      );
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setError("");
+
+      const provider =
+        await getMetaMaskProvider();
+
+      const signer =
+        await provider.getSigner();
+
+      const signerAddress =
+        await signer.getAddress();
+
+      const signerContract =
+        getSignerContract(signer);
+
+      const roleValue =
+        ROLE_VALUES[form.role];
+
+      const tx =
+        await signerContract.registerOrganization(
+          form.organizationId.trim(),
+          form.name.trim(),
+          form.walletAddress.trim(),
+          roleValue,
+          form.location.trim()
+        );
+
+      await tx.wait();
+
+      setForm({
+        organizationId: "",
+        name: "",
+        walletAddress: "",
+        role: "MANUFACTURER",
+        location: "",
+      });
+
+      setShowForm(false);
+
+      await loadOrganizations();
+
+      console.log(
+        "Organization registered by:",
+        signerAddress
+      );
+    } catch (err) {
+      console.error(
+        "Organization registration failed:",
+        err
+      );
+
+      setError(
+        err?.shortMessage ||
+          err?.reason ||
+          err?.message ||
+          "Failed to register organization."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <AppShell role="admin">
       <PageHeader
@@ -133,27 +252,186 @@ export default function OrganizationsPage() {
         action={
           <button
             className="button button-primary"
-            disabled
-            title="Organization registration will be connected to the smart contract next."
+            onClick={() =>
+              setShowForm(
+                (current) => !current
+              )
+            }
+            disabled={submitting}
           >
-            + Register organization
+            <Plus
+              size={17}
+              strokeWidth={2}
+            />
+
+            {showForm
+              ? "Close"
+              : "Register organization"}
           </button>
         }
       />
 
-      {/* ERROR */}
+      {showForm && (
+        <section
+          className="panel"
+          style={{
+            marginBottom: 20,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              marginBottom: 20,
+            }}
+          >
+            <Building2
+              size={22}
+              strokeWidth={2}
+            />
+
+            <h2
+              style={{
+                margin: 0,
+              }}
+            >
+              Register Organization
+            </h2>
+          </div>
+
+          <form
+            onSubmit={handleRegister}
+          >
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(220px, 1fr))",
+                gap: 16,
+              }}
+            >
+              <label>
+                <span>Organization ID</span>
+
+                <input
+                  name="organizationId"
+                  value={
+                    form.organizationId
+                  }
+                  onChange={handleChange}
+                  placeholder="ORG-004"
+                  required
+                />
+              </label>
+
+              <label>
+                <span>Organization Name</span>
+
+                <input
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  placeholder="Fresh Foods Ltd"
+                  required
+                />
+              </label>
+
+              <label>
+                <span>Wallet Address</span>
+
+                <input
+                  name="walletAddress"
+                  value={
+                    form.walletAddress
+                  }
+                  onChange={handleChange}
+                  placeholder="0x..."
+                  required
+                />
+              </label>
+
+              <label>
+                <span>Role</span>
+
+                <select
+                  name="role"
+                  value={form.role}
+                  onChange={handleChange}
+                >
+                  <option value="MANUFACTURER">
+                    Manufacturer
+                  </option>
+
+                  <option value="DISTRIBUTOR">
+                    Distributor
+                  </option>
+
+                  <option value="RETAILER">
+                    Retailer
+                  </option>
+
+                  <option value="CUSTOMER">
+                    Customer
+                  </option>
+                </select>
+              </label>
+
+              <label>
+                <span>Location</span>
+
+                <input
+                  name="location"
+                  value={
+                    form.location
+                  }
+                  onChange={handleChange}
+                  placeholder="Mumbai"
+                  required
+                />
+              </label>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent:
+                  "flex-end",
+                marginTop: 20,
+              }}
+            >
+              <button
+                type="submit"
+                className="button button-primary"
+                disabled={submitting}
+              >
+                {submitting
+                  ? "Registering..."
+                  : "Register on blockchain"}
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
+
       {error && (
         <section
           className="panel"
-          style={{ marginBottom: 20 }}
+          style={{
+            marginBottom: 20,
+          }}
         >
-          <p style={{ color: "#dc2626" }}>
+          <p
+            style={{
+              color: "#dc2626",
+              margin: 0,
+            }}
+          >
             {error}
           </p>
         </section>
       )}
 
-      {/* LOADING */}
       {loading ? (
         <section className="panel">
           <p>
@@ -161,11 +439,10 @@ export default function OrganizationsPage() {
           </p>
         </section>
       ) : organizations.length === 0 ? (
-        /* EMPTY */
         <section className="panel">
           <p>
-            No organizations have been registered
-            on the blockchain yet.
+            No organizations have been
+            registered on the blockchain yet.
           </p>
         </section>
       ) : (
@@ -223,7 +500,6 @@ export default function OrganizationsPage() {
             rows={organizations}
           />
 
-          {/* ORGANIZATION LOCATION DETAILS */}
           <div
             style={{
               marginTop: 20,
@@ -258,9 +534,17 @@ export default function OrganizationsPage() {
                       color:
                         "#6b7280",
                       fontSize: 13,
+                      display: "flex",
+                      alignItems:
+                        "center",
+                      gap: 5,
                     }}
                   >
-                    📍{" "}
+                    <MapPin
+                      size={14}
+                      strokeWidth={2}
+                    />
+
                     {organization.location ||
                       "Location not specified"}
                   </p>

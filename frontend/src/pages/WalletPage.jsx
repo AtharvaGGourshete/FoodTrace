@@ -114,7 +114,7 @@ export default function WalletPage() {
                             <div
                                 style={{
                                     marginTop:
-                                        "24px",
+                                        "34px",
                                     padding:
                                         "16px",
                                     borderRadius:
@@ -187,6 +187,7 @@ export default function WalletPage() {
                                 style={{
                                     marginTop:
                                         "12px",
+                                    marginLeft: "12px",
                                 }}
                                 onClick={
                                     disconnect

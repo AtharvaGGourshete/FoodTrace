@@ -1,4 +1,20 @@
 import { Link } from "react-router-dom";
+import {
+  ArrowUpRight,
+  Check,
+  Database,
+  GitBranch,
+  History,
+  PackageCheck,
+  QrCode,
+  ShieldCheck,
+  ShoppingBasket,
+  Store,
+  Truck,
+  UserCheck,
+  WalletCards,
+  AlertTriangle,
+} from "lucide-react";
 
 export default function LandingPage() {
   return (
@@ -89,15 +105,18 @@ export default function LandingPage() {
           <div className="hero-trust">
 
             <span>
-              ✓ Immutable batch history
+              <Check size={16} strokeWidth={2.5} />
+              Immutable batch history
             </span>
 
             <span>
-              ✓ Wallet-based identity
+              <WalletCards size={16} strokeWidth={2.5} />
+              Wallet-based identity
             </span>
 
             <span>
-              ✓ Smart-contract rules
+              <ShieldCheck size={16} strokeWidth={2.5} />
+              Smart-contract rules
             </span>
 
           </div>
@@ -126,7 +145,7 @@ export default function LandingPage() {
             <div className="trace-product">
 
               <div className="product-art">
-                🥫
+                <ShoppingBasket size={28} />
               </div>
 
               <div>
@@ -153,18 +172,21 @@ export default function LandingPage() {
                   "Manufacturer",
                   "ABC Foods",
                   "Created",
+                  PackageCheck,
                 ],
                 [
                   "02",
                   "Distributor",
                   "XYZ Distribution",
                   "Transferred",
+                  Truck,
                 ],
                 [
                   "03",
                   "Retailer",
                   "Retail Store ABC",
                   "Received",
+                  Store,
                 ],
               ].map(
                 ([
@@ -172,6 +194,7 @@ export default function LandingPage() {
                   role,
                   name,
                   state,
+                  Icon,
                 ]) => (
 
                   <div
@@ -182,6 +205,10 @@ export default function LandingPage() {
                     <span className="route-number">
                       {number}
                     </span>
+
+                    <div className="route-role-icon">
+                      <Icon size={16} />
+                    </div>
 
                     <div>
                       <small>
@@ -194,11 +221,11 @@ export default function LandingPage() {
                     </div>
 
                     <span className="route-state">
-                      ✓ {state}
+                      <Check size={14} />
+                      {state}
                     </span>
 
                   </div>
-
                 )
               )}
 
@@ -253,19 +280,22 @@ export default function LandingPage() {
               "01",
               "Create",
               "Manufacturer registers a product and creates a batch.",
+              PackageCheck,
             ],
             [
               "02",
               "Transfer",
               "Ownership moves between authorized supply-chain participants.",
+              GitBranch,
             ],
             [
               "03",
               "Verify",
               "Customers scan a QR code to view the recorded journey.",
+              QrCode,
             ],
           ].map(
-            ([number, title, copy]) => (
+            ([number, title, copy, Icon]) => (
 
               <div
                 className="feature-card"
@@ -275,6 +305,10 @@ export default function LandingPage() {
                 <span className="step-number">
                   {number}
                 </span>
+
+                <div className="step-icon">
+                  <Icon size={22} />
+                </div>
 
                 <h3>
                   {title}
@@ -316,37 +350,37 @@ export default function LandingPage() {
 
           {[
             [
-              "⌁",
+              PackageCheck,
               "Batch traceability",
               "Follow a batch from manufacturing through retail.",
             ],
             [
-              "◈",
+              ShieldCheck,
               "Smart contracts",
               "Enforce ownership, role, and recall rules on-chain.",
             ],
             [
-              "↗",
+              History,
               "Immutable history",
               "Preserve the sequence of supply-chain events.",
             ],
             [
-              "⚠",
+              AlertTriangle,
               "Recall management",
               "Flag recalled batches and prevent further transfers.",
             ],
             [
-              "▦",
+              QrCode,
               "QR verification",
               "Give customers a simple way to verify product history.",
             ],
             [
-              "◉",
+              UserCheck,
               "Role-based access",
               "Separate actions for admins and supply-chain participants.",
             ],
           ].map(
-            ([icon, title, copy]) => (
+            ([Icon, title, copy]) => (
 
               <div
                 className="feature-card feature-card-large"
@@ -354,7 +388,7 @@ export default function LandingPage() {
               >
 
                 <span className="feature-icon">
-                  {icon}
+                  <Icon size={24} strokeWidth={2} />
                 </span>
 
                 <h3>

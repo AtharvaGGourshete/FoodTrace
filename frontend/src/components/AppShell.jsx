@@ -37,7 +37,7 @@ const navByRole = {
     ["Products", "/app/products", Package],
     ["Batches", "/app/batches", Boxes],
     ["Transfer Batch", "/app/transfer", ArrowRight],
-    ["Recall Batch", "/app/recall", AlertTriangle],
+    // ["Recall Batch", "/app/recall", AlertTriangle],
     ["History", "/app/history", History],
   ],
 
@@ -52,7 +52,7 @@ const navByRole = {
     ["Dashboard", "/app/retailer", LayoutDashboard],
     ["Batches", "/app/batches", Boxes],
     ["Receive Batch", "/app/transfer", ArrowDownToLine],
-    ["QR Verification", "/verify/BATCH-2026-001", QrCode],
+    //["QR Verification", "/verify/BATCH-2026-001", QrCode],
     ["History", "/app/history", History],
   ],
 };
@@ -154,7 +154,7 @@ export default function AppShell({
 
         <div className="sidebar-bottom">
 
-          <NavLink
+          {/* <NavLink
             className="side-link"
             to="/verify/BATCH-2026-001"
           >
@@ -166,7 +166,7 @@ export default function AppShell({
             </span>
 
             Public Verification
-          </NavLink>
+          </NavLink> */}
 
           <button
             className="wallet-mini"

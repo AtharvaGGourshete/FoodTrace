@@ -2,9 +2,7 @@
 pragma solidity ^0.8.24;
 
 contract FoodTrace {
-    // ============================================================
     // ENUMS
-    // ============================================================
 
     enum Role {
         NONE,
@@ -23,9 +21,7 @@ contract FoodTrace {
         DELIVERED
     }
 
-    // ============================================================
     // STRUCTS
-    // ============================================================
 
     struct Organization {
         string organizationId;
@@ -68,9 +64,7 @@ contract FoodTrace {
         string notes;
     }
 
-    // ============================================================
     // STATE VARIABLES
-    // ============================================================
 
     address public admin;
 
@@ -99,9 +93,7 @@ contract FoodTrace {
     // Number of batches currently owned by each wallet.
     mapping(address => uint256) public ownedBatchCount;
 
-    // ============================================================
     // EVENTS
-    // ============================================================
 
     event OrganizationRegistered(
         string indexed organizationId,
@@ -156,9 +148,7 @@ contract FoodTrace {
         address indexed actor
     );
 
-    // ============================================================
     // MODIFIERS
-    // ============================================================
 
     modifier onlyAdmin() {
         require(msg.sender == admin, "Only admin can perform this action");
@@ -209,18 +199,14 @@ contract FoodTrace {
         _;
     }
 
-    // ============================================================
     // CONSTRUCTOR
-    // ============================================================
 
     constructor() {
         admin = msg.sender;
         roles[msg.sender] = Role.ADMIN;
     }
 
-    // ============================================================
     // ROLE MANAGEMENT
-    // ============================================================
 
     function getRole(address wallet) external view returns (Role) {
         return roles[wallet];
@@ -238,9 +224,8 @@ contract FoodTrace {
         );
     }
 
-    // ============================================================
+
     // ORGANIZATION MANAGEMENT
-    // ============================================================
 
     function registerOrganization(
         string memory organizationId,
@@ -364,9 +349,7 @@ contract FoodTrace {
         return ownedBatchCount[wallet];
     }
 
-    // ============================================================
     // PRODUCT MANAGEMENT
-    // ============================================================
 
     function createProduct(
         string memory productId,
@@ -470,9 +453,8 @@ contract FoodTrace {
         return productIds;
     }
 
-    // ============================================================
+
     // BATCH MANAGEMENT
-    // ============================================================
 
     function createBatch(
         string memory batchId,
@@ -596,10 +578,7 @@ contract FoodTrace {
         return productBatchIds[productId].length;
     }
 
-    // ============================================================
     // BATCH TRANSFER
-    // ============================================================
-
     function transferBatch(
         string memory batchId,
         address newOwner,
@@ -663,9 +642,7 @@ contract FoodTrace {
         );
     }
 
-    // ============================================================
     // BATCH SALE
-    // ============================================================
 
     function sellBatch(
         string memory batchId,
@@ -713,9 +690,7 @@ contract FoodTrace {
         );
     }
 
-    // ============================================================
     // RECALL MANAGEMENT
-    // ============================================================
 
     function recallBatch(
         string memory batchId,
@@ -772,9 +747,7 @@ contract FoodTrace {
         return batches[batchId].recalled;
     }
 
-    // ============================================================
     // BATCH HISTORY
-    // ============================================================
 
     function recordBatchEvent(
         string memory batchId,
@@ -848,9 +821,7 @@ contract FoodTrace {
         return batchHistory[batchId].length;
     }
 
-    // ============================================================
     // OWNERSHIP / VERIFICATION
-    // ============================================================
 
     function getCurrentOwner(
         string memory batchId
